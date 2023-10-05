@@ -18,11 +18,18 @@ class display_7seg
 private:
     int _digit;
     int _symbol;
+    float _num;
+    int _addr;
 
 public:
     void begin();
     void segmentDisplay(int symbol);
-    void lightDigit(int digit);
+    void lightDigit(int digit, int symbol1, int symbol2, int symbol3);
+    int remainderFirst(float num);
+    int remainderSecond(float num);
+    int remainderAddrFirst(int num);
+    int remainderAddrSecond(int num);
+    int remainderAddrThrid(int num);
 };
 
 void display_7seg::begin()
@@ -194,24 +201,27 @@ void display_7seg::segmentDisplay(int symbol)
     }
 }
 
-void display_7seg::lightDigit(int digit)
+void display_7seg::lightDigit(int digit, int symbol1, int symbol2, int symbol3)
 {
     _digit = digit;
     switch (_digit)
     {
     case 1:
+        segmentDisplay(symbol1);
         digitalWrite(DIG1, LOW);
         digitalWrite(DIG2, HIGH);
         digitalWrite(DIG3, HIGH);
         break;
 
     case 2:
+        segmentDisplay(symbol2);
         digitalWrite(DIG1, HIGH);
         digitalWrite(DIG2, LOW);
         digitalWrite(DIG3, HIGH);
         break;
 
     case 3:
+        segmentDisplay(symbol3);
         digitalWrite(DIG1, HIGH);
         digitalWrite(DIG2, HIGH);
         digitalWrite(DIG3, LOW);
@@ -222,4 +232,41 @@ void display_7seg::lightDigit(int digit)
     }
 }
 
+int display_7seg::remainderFirst(float num){
+    _num = num;
+    if(_num >= 99.00){
+        return 9;
+    }
+    int floatToInt = _num * 100;
+    int remainderFirst = (floatToInt / 1000) % 10;
+    return remainderFirst;
+}
+
+int display_7seg::remainderSecond(float num){
+    _num = num;
+      if(_num >= 99.00){
+        return 9;
+    }
+    int floatToInt = _num * 100;
+    int remainderSecond = (floatToInt / 100) % 10;
+    return remainderSecond;
+}
+
+int display_7seg::remainderAddrFirst(int addr){
+    _addr = addr;
+    int remainderFirst = (_addr / 100) % 10;
+    return remainderFirst;
+}
+
+int display_7seg::remainderAddrSecond(int addr){
+    _addr = addr;
+    int remainderSecond = (_addr / 10) % 10;
+    return remainderSecond;
+}
+
+int display_7seg::remainderAddrThrid(int addr){
+    _addr = addr;
+    int remainderThrid = (_addr) % 10;
+    return remainderThrid;
+}
 #endif
