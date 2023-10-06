@@ -2,6 +2,8 @@
 #include <HardwareSerial.h>
 #include "display_7seg.h"
 #include "industrialli_SHT20.h"
+#include "industrialli_loraMesh.h"
+
 #define DEBUG PB12
 #define USART2_TX PA2
 #define USART2_RX PA3
@@ -29,19 +31,18 @@ int symbolAddr3;
 float temp;
 float humi;
 int info;
-int addr = 15;
-
+uint16_t addr = 2;
+// HardwareSerial Serial2(USART2_RX, USART2_TX);
 display_7seg display;
 industrialli_SHT20 SHT20;
 
-// HardwareSerial Serial2(USART2_RX, USART2_TX);
-// HardwareSerial Serial(PB7, PB6);
+HardwareSerial Serial1(PB7, PB6);
 TIM_TypeDef *Instance = TIM3;
 HardwareTimer *MyTim = new HardwareTimer(Instance);
 
 TIM_TypeDef *Instance1 = TIM14;
 HardwareTimer *MyTim1 = new HardwareTimer(Instance1);
-
+LoRaMESH lora(&Serial2);
 void cycleDigit();
 void cycleInfo();
 void setup()
@@ -58,10 +59,56 @@ void setup()
   pinMode(GPIO_05, INPUT);
   pinMode(GPIO_06, INPUT);
   pinMode(GPIO_07, INPUT);
+  Serial2.setRx(USART2_RX);
+  Serial2.setTx(USART2_TX);
+  // Serial.begin(115200);
+  Serial1.begin(115200);
+  Serial2.begin(9600);
 
-  Serial.begin(115200);
-  // Serial1.begin(115200);
-  Serial2.begin(115200);
+  /************************* LoRa *************************/
+  delay(5000);
+  lora.begin(false);
+
+  if (!lora.setnetworkId(addr))
+  {
+    Serial1.println("Erro ao definir o novo ID");
+    while (1)
+      ;
+  }
+
+  Serial1.println("ID configurado com sucesso!");
+  delay(1000);
+
+  if (!lora.config_bps(BW500, SF_LoRa_7, CR4_5))
+  {
+    Serial1.println("Erro ao configurar bps");
+    while (1)
+      ;
+  }
+
+  Serial1.println("Parametros LoRa configurados com sucesso!");
+ delay(1000);
+  if (!lora.config_class(LoRa_CLASS_C, LoRa_WINDOW_15s))
+  {
+    Serial1.println("Erro ao configurar a classe");
+    while (1)
+      ;
+  }
+
+  Serial1.println("Modo de operacao configurado com sucesso!");
+ delay(1000);
+  if (!lora.setpassword(123))
+  {
+    Serial1.println("Erro ao gravar a senha ou a senha gravada não condiz com a senha definida");
+    while (1)
+      ;
+  }
+
+  Serial1.println("Senha configurada com sucesso!");
+ delay(1000);
+  Serial1.println("LocalID: " + String(lora.localId));
+  Serial1.println("UniqueID: " + String(lora.localUniqueId));
+  Serial1.println("Pass <= 65535: " + String(lora.registered_password));
 
   MyTim->setOverflow(120, HERTZ_FORMAT); // 10 Hz
   MyTim->attachInterrupt(cycleDigit);
@@ -87,13 +134,18 @@ void loop()
   temp = SHT20.getTemperature();
   humi = SHT20.getHumidity();
 
-  Serial.print(symbolTemp1);
-  Serial.print(" ");
-  Serial.println(symbolTemp2);
+  // Serial1.print(temp);
+  // Serial2.print(temp);
+  delay(1000);
+
+  // delay(1000);
+
+  // delay(1000);
 }
 
 void cycleDigit()
 {
+  noInterrupts();
   if (info > 3)
   {
     info = 1;
@@ -137,10 +189,10 @@ void cycleDigit()
   default:
     break;
   }
+  interrupts();
 }
 
 void cycleInfo()
 {
-
   info++;
 }
