@@ -68,8 +68,9 @@ void setup()
   /************************* LoRa *************************/
   delay(5000);
   lora.begin(false);
+/*
 
-  if (!lora.setnetworkId(addr))
+ if (!lora.setnetworkId(addr))
   {
     Serial1.println("Erro ao definir o novo ID");
     while (1)
@@ -106,11 +107,14 @@ void setup()
 
   Serial1.println("Senha configurada com sucesso!");
  delay(1000);
+
+*/
+ 
   Serial1.println("LocalID: " + String(lora.localId));
   Serial1.println("UniqueID: " + String(lora.localUniqueId));
   Serial1.println("Pass <= 65535: " + String(lora.registered_password));
 
-  MyTim->setOverflow(120, HERTZ_FORMAT); // 10 Hz
+  MyTim->setOverflow(200, HERTZ_FORMAT); // 10 Hz
   MyTim->attachInterrupt(cycleDigit);
   MyTim->resume();
 
