@@ -2,7 +2,7 @@
 #include <HardwareSerial.h>
 #include "display_7seg.h"
 #include "industrialli_SHT20.h"
-#include "industrialli_loraMesh.h"
+#include <industrialli_loraMesh.h>
 
 #define DEBUG PB12
 #define USART2_TX PA2
@@ -31,7 +31,17 @@ int symbolAddr3;
 float temp;
 float humi;
 int info;
-uint16_t addr = 2;
+// MASTER
+uint16_t addr = 0;
+
+// SLAVE
+//uint16_t addr = 1;
+bool sendNow = false;
+
+// transmissao de mensagem
+
+int msgSize;
+
 // HardwareSerial Serial2(USART2_RX, USART2_TX);
 display_7seg display;
 industrialli_SHT20 SHT20;
@@ -68,19 +78,22 @@ void setup()
   /************************* LoRa *************************/
   delay(5000);
   lora.begin(false);
-/*
 
- if (!lora.setnetworkId(addr))
-  {
-    Serial1.println("Erro ao definir o novo ID");
-    while (1)
-      ;
-  }
+  /*
+   if (!lora.setnetworkId(addr))
+    {
+      Serial1.println("Erro ao definir o novo ID");
+      while (1)
+        ;
+    }
 
-  Serial1.println("ID configurado com sucesso!");
-  delay(1000);
+    Serial1.println("ID configurado com sucesso!");
+    delay(2000);
 
-  if (!lora.config_bps(BW500, SF_LoRa_7, CR4_5))
+  */
+
+  /*
+    if (!lora.config_bps(BW500, SF_LoRa_7, CR4_5))
   {
     Serial1.println("Erro ao configurar bps");
     while (1)
@@ -88,28 +101,32 @@ void setup()
   }
 
   Serial1.println("Parametros LoRa configurados com sucesso!");
- delay(1000);
-  if (!lora.config_class(LoRa_CLASS_C, LoRa_WINDOW_15s))
-  {
-    Serial1.println("Erro ao configurar a classe");
-    while (1)
-      ;
-  }
+ delay(2000);
+  */
 
-  Serial1.println("Modo de operacao configurado com sucesso!");
- delay(1000);
-  if (!lora.setpassword(123))
-  {
-    Serial1.println("Erro ao gravar a senha ou a senha gravada não condiz com a senha definida");
-    while (1)
-      ;
-  }
+  /*
+    if (!lora.config_class(LoRa_CLASS_C, LoRa_WINDOW_15s))
+   {
+     Serial1.println("Erro ao configurar a classe");
+     while (1)
+       ;
+   }
+   Serial1.println("Modo de operacao configurado com sucesso!");
+  delay(2000);
+   */
 
-  Serial1.println("Senha configurada com sucesso!");
- delay(1000);
+  /*
+    if (!lora.setpassword(123))
+    {
+      Serial1.println("Erro ao gravar a senha ou a senha gravada não condiz com a senha definida");
+      while (1)
+        ;
+    }
 
-*/
- 
+    Serial1.println("Senha configurada com sucesso!");
+   delay(2000);
+  */
+
   Serial1.println("LocalID: " + String(lora.localId));
   Serial1.println("UniqueID: " + String(lora.localUniqueId));
   Serial1.println("Pass <= 65535: " + String(lora.registered_password));
@@ -137,10 +154,175 @@ void loop()
   */
   temp = SHT20.getTemperature();
   humi = SHT20.getHumidity();
+  // Serial1.print(temp);
+  // Serial1.print(" ");
+  // Serial1.print(humi);
+  if (addr == 1)
+  {
+    int function = lora.read_function();
+    Serial1.println(function);
+    if (function == 3)
+    {
+      lora.write_node_temp(0, temp);
+    }
+    else if (function == 4)
+    {
+      lora.write_node_humi(0, humi);
+    }
+
+    if (sendNow)
+    {
+      // lora.write_node_temp(0, temp);
+    }
+    else
+    {
+      // lora.write_node_humi(0, humi);
+    }
+  }
+  else if (addr == 0)
+  {
+    if (sendNow)
+    {Serial1.print("Pendindo temperatura do node 1...");
+      lora.write_node_function(1, 3);
+       Serial1.print("Temp: ");
+      Serial1.print(lora.read_NodeTemp());
+      Serial1.println("°C");
+    }
+    else
+    {
+      Serial1.print("Pendindo umidade do node 1...");
+      lora.write_node_function(1, 4);
+      Serial1.print("Umi: ");
+      Serial1.print(lora.read_NodeHumi());
+      Serial1.println("%");
+    }
+
+    // Serial1.print(" ");
+    // Serial1.println(lora.read_NodeHumi());
+  }
+  delay(1000);
+  sendNow = !sendNow;
+
+  /*
+
+  //ENVIO E RECEBIMENTO DE INT
+    int function = 1234;
+     byte functionArray[4] = {
+        ((uint8_t*)&function)[0],
+        ((uint8_t*)&function)[1],
+        ((uint8_t*)&function)[2],
+        ((uint8_t*)&function)[3]
+     };
+
+     //receiver
+      int b;
+      ((uint8_t*)&b)[0] = functionArray[0];
+      ((uint8_t*)&b)[1] = functionArray[1];
+      ((uint8_t*)&b)[2] = functionArray[2];
+      ((uint8_t*)&b)[3] = functionArray[3];
+
+
+
+  //ENVIO E RECEBIMENTO DE FLOAT
+    //sender
+     byte tempArray[4] = {
+        ((uint8_t*)&temp)[0],
+        ((uint8_t*)&temp)[1],
+        ((uint8_t*)&temp)[2],
+        ((uint8_t*)&temp)[3]
+     };
+
+     //receiver
+      float a;
+      ((uint8_t*)&a)[0] = tempArray[0];
+      ((uint8_t*)&a)[1] = tempArray[1];
+      ((uint8_t*)&a)[2] = tempArray[2];
+      ((uint8_t*)&a)[3] = tempArray[3];
+
+  //ENVIAR E RECEBER INT E FLOAT DE UMA VEZ
+      uint8_t all[8] = {
+        ((uint8_t*)&temp)[0],
+        ((uint8_t*)&temp)[1],
+        ((uint8_t*)&temp)[2],
+        ((uint8_t*)&temp)[3],
+        ((uint8_t*)&function)[4],
+        ((uint8_t*)&function)[5],
+        ((uint8_t*)&function)[6],
+        ((uint8_t*)&function)[7]
+      };
+  float c;
+  int d;
+
+      ((uint8_t*)&c)[0] = all[0];
+      ((uint8_t*)&c)[1] = all[1];
+      ((uint8_t*)&c)[2] = all[2];
+      ((uint8_t*)&c)[3] = all[3];
+      ((uint8_t*)&d)[0] = all[4];
+      ((uint8_t*)&d)[1] = all[5];
+      ((uint8_t*)&d)[2] = all[6];
+      ((uint8_t*)&d)[3] = all[7];
+
+      Serial1.print(function);
+      Serial1.print(" ");
+      Serial1.print(b);
+      Serial1.print(" ");
+      Serial1.print(temp);
+      Serial1.print(" ");
+      Serial1.print(a);
+      Serial1.print(" ");
+      Serial1.print(d);
+      Serial1.print(" ");
+      Serial1.println(c);
+      /////////////////////////////////////////////////////////////
+
+
+
+
+
+
+  */
+
+  /*
+  //converte um elemento do array para int
+    msgSize = sizeof(bufferPayload);
+String number = "";
+for(int i = 0; i < msgSize; i++){
+  number += (uint8_t)bufferPayload[i];
+
+}
+  num = number.toInt();
+  */
+
+  /*
+              String number = "";
+                number += (uint16_t)bufferPayload[0];
+                number += (uint16_t)bufferPayload[1];
+                number += (uint16_t)bufferPayload[2];
+                number += (uint16_t)bufferPayload[3];
+                int num = number.toInt();
+  */
+
+  /*
+ Serial1.print(" ");
+Serial1.print(sizeof(bufferPayload));
+Serial1.print(" ");
+Serial1.print(num, DEC);
+Serial1.println(" ");
+  */
+
+  // Serial1.print(number);
+  /*
+  Serial1.print(" ");
+  if (num == 123456789){
+    Serial1.println("OK!");
+  }
+  else{
+    Serial1.println("NOT OK!");
+  }
+  */
 
   // Serial1.print(temp);
   // Serial2.print(temp);
-  delay(1000);
 
   // delay(1000);
 
